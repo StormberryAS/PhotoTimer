@@ -1,0 +1,16 @@
+Sunrise‑Sunset Photo‑Timer – Golden‑Hour Scheduler
+
+Core Functionality:
+- Calculate exact golden‑hour windows for any location.
+- Countdown timer with a subtle pulsating glow effect.
+- One‑click "Add to calendar" button to export the window as an iCal event.
+
+Why it fits:
+- Extends SunApp’s solar‑position engine.
+- Provides a visual tool for photographers, encouraging repeat visits.
+- Uses the same premium dark‑mode glass‑morphism UI.
+
+Potential UI Elements:
+- Glass‑morphism card showing start/end times.
+- Animated glow around the timer when the golden hour is active.
+- Responsive layout for mobile and desktop.
