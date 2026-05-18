@@ -1,20 +1,25 @@
-# PhotoTimer | Golden Hour Scheduler
-<br/>
+# PhotoTimer
 
-**PhotoTimer** is a completely offline, astronomical calculator designed for photographers and cinematographers by **Stormberry**. 
+Offline golden-hour and blue-hour scheduler for photographers and cinematographers. PhotoTimer calculates exact "Golden Hour" and "Blue Hour" windows anywhere on Earth without external server lookups or tracker cookies.
 
-It uses the `SunCalc` library and native JavaScript APIs to deterministically calculate exact "Golden Hour" and "Blue Hour" photography windows anywhere on Earth without requiring external server lookups or tracker cookies. 
+**Live:** [photo.stormberry.as](https://photo.stormberry.as)
 
-### Key Features
-* **Hyper-Accurate Calculations**: Computes morning and evening golden hour bounds securely within your browser.
-* **Instant Live Countdown**: Features an animated, real-time pulsing ticker that counts down to the next optimal shooting window.
-* **.ICS Calendar Export**: Integrated one-click generation of `.ics` calendar files, letting you natively drop your shooting window into Apple Calendar, Google Calendar, or Outlook.
-* **Sovereign Architecture**: Pure HTML/CSS design built entirely independently, ensuring maximum privacy and offline capability (with an optional 100% anonymized Open-Meteo GPS fallback).
+## Features
+- **Accurate calculations**: morning and evening golden-hour bounds computed within the browser.
+- **Live countdown**: an animated, real-time pulsing ticker that counts down to the next optimal shooting window.
+- **.ics calendar export**: one-click `.ics` generation, so the next window drops straight into Apple Calendar, ProtonCalendar, Outlook, etc.
+- **Sovereign architecture**: works offline, with an optional anonymous Open-Meteo timezone fallback for raw GPS coordinates.
 
-## Technology Stack
-- Vanilla **HTML5** / **CSS3** / **JavaScript**.
-- [SunCalc](https://github.com/mourner/suncalc) integration for local astronomical math.
-- Complete glassmorphism Stormberry design system interface.
+## Architecture
+- **Vanilla HTML/CSS/JS**, no frameworks, no build step.
+- **Privacy first**, no cookies, no tracking. Only one anonymous external call (Open-Meteo) for timezone resolution from raw GPS coordinates.
+- Stormberry dark-mode glassmorphism design system, Inter typography.
+- **Sovereign AI**, built and maintained using high-speed agentic workflows.
 
----
-*Developed and maintained by the [Stormberry A.S.](https://stormberry.as) ecosystem.*
+## Stack
+- [SunCalc](https://github.com/mourner/suncalc) for solar position maths, bundled locally.
+- [Open-Meteo](https://open-meteo.com) for timezone resolution from raw GPS coordinates only.
+- [Inter](https://rsms.me/inter/) typeface, locally hosted.
+
+## Credits
+Built by [Stormberry AS](https://stormberry.as). Proudly powered by sovereign AI agents.
