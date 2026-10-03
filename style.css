@@ -276,6 +276,24 @@ label {
   background: rgba(0,0,0,0.6);
 }
 
+/* Inline message under a coordinate field when it cannot be read */
+.field-error {
+  color: var(--accent-rose);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.text-input[aria-invalid="true"] {
+  border-color: rgba(255, 107, 107, 0.6);
+}
+
+/* Echo of the coordinates actually used, e.g. "Using 60.39, 5.32" */
+.field-note {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.8) sepia(1) saturate(3) hue-rotate(340deg);
   cursor: pointer;
@@ -506,10 +524,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3);
   color: var(--accent-rose); font-size: 0.88rem; text-align: center; border-radius: var(--r-sm);
 }
-
-.device-panel { display: flex; flex-direction: column; align-items: center; gap: var(--sp-md); padding: var(--sp-md) 0; }
-.device-hint { color: var(--text-secondary); font-size: 0.88rem; text-align: center; }
-.device-coords { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-blue); text-align: center; background: rgba(79, 195, 247, 0.08); border: 1px solid rgba(79, 195, 247, 0.2); border-radius: var(--r-sm); padding: var(--sp-sm) var(--sp-md); width: 100%; }
 
 .loading-overlay {
   position: fixed; inset: 0; background: rgba(21, 14, 26, 0.75);
