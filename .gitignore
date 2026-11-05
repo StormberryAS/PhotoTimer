@@ -1,0 +1,4 @@
+# Local files that must never be committed or published. npm ci puts TypeScript in node_modules/.
+node_modules/
+__pycache__/
+*.pyc
