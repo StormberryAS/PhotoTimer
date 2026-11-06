@@ -24,7 +24,7 @@
  *      the browser's local timezone.
  *   2. For cities we already have the IANA timezone ID embedded in
  *      the database. For typed coordinates we resolve the timezone
- *      offline from the nearest known city. Nothing hits the network.
+ *      from the nearest known city, with no lookup. Nothing hits the network.
  *      There is no device-location option: the stormberry.as zone
  *      sends Permissions-Policy geolocation=(), which blocks it on
  *      every Labs host, so it was removed on 2026-10-02.
@@ -300,7 +300,7 @@ function setEcho(text: string | null): void {
 
 /* ================================================================
    SECTION 8: TIMEZONE RESOLUTION
-   Fully offline. City zones come straight from the bundled city
+   No lookups. City zones come straight from the bundled city
    database, and typed coordinates resolve to the nearest known
    city's zone. Nothing here hits the network.
 ================================================================ */

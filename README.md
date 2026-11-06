@@ -1,6 +1,6 @@
 # PhotoTimer
 
-Offline golden-hour scheduler for photographers and cinematographers. PhotoTimer calculates the exact morning and evening golden-hour windows anywhere on Earth without external server lookups or tracker cookies.
+Golden-hour scheduler for photographers and cinematographers. PhotoTimer calculates the exact morning and evening golden-hour windows anywhere on Earth in your browser, with no server lookups and no tracker cookies. It is an ordinary web page with no service worker: a first visit needs a connection, and once the page has loaded the calculation needs none.
 
 **Live:** [photo.stormberry.as](https://photo.stormberry.as)
 
