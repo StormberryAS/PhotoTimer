@@ -21,8 +21,12 @@
 # (tools/, tests/), the package files and .npmrc, and node_modules/, where npm ci puts TypeScript,
 # are excluded. (.npmrc and .gitattributes are dot files, which Jekyll never
 # publishes; .npmrc is listed anyway, as in AstroQuiz and the others.)
+#
+# description.txt (6 November 2026) is the first written plan for the app, not part of the page.
+# No served file links to it or loads it, so it is excluded too.
 exclude:
   - DISCLAIMER.md
+  - description.txt
   - LICENSE
   - README.md
   - bump_assets.py

@@ -126,10 +126,10 @@ function init(): void {
     if (!(target instanceof Element) || !target.closest('.search-wrapper')) closeDropdown();
   });
 
-  // Editing a coordinate clears its error and the "Using ..." line, which
-  // described the previous value, until the next Calculate.
-  els.latInput.addEventListener('input', () => { setFieldError(els.latInput, els.latError, null); setEcho(null); });
-  els.lonInput.addEventListener('input', () => { setFieldError(els.lonInput, els.lonError, null); setEcho(null); });
+  // Editing a coordinate clears its error. It does not touch the "Using ..." line: that line names
+  // the source of the result on screen, and an edit does not change that result (see setEcho).
+  els.latInput.addEventListener('input', () => setFieldError(els.latInput, els.latError, null));
+  els.lonInput.addEventListener('input', () => setFieldError(els.lonInput, els.lonError, null));
 
   els.calculateBtn.addEventListener('click', onCalculate);
 }
@@ -187,7 +187,15 @@ function onCityInput(): void {
     li.setAttribute('role', 'option');
     li.setAttribute('aria-selected', 'false');
     li.dataset['index'] = String(i);
-    li.innerHTML = `<span class="city-name">${city.name}</span><span class="city-country">${city.country}</span>`;
+    // Built with DOM calls and textContent, so a name is always text, never markup.
+    const name = document.createElement('span');
+    name.className = 'city-name';
+    name.textContent = city.name;
+    const country = document.createElement('span');
+    country.className = 'city-country';
+    country.textContent = city.country;
+    li.appendChild(name);
+    li.appendChild(country);
     li.addEventListener('click', () => selectCity(city));
     li.addEventListener('mouseenter', () => setHighlight(i));
     els.cityDropdown.appendChild(li);
@@ -200,15 +208,18 @@ function onCityInput(): void {
 
 function onCityKeydown(e: KeyboardEvent): void {
   const items = els.cityDropdown.querySelectorAll('li');
+  // The arrows and Enter act on the list only while it is open and shows its rows. A closed
+  // list has no rows to pick, so a key must not choose a city from a list the user cannot see.
+  const open = !els.cityDropdown.hidden && items.length > 0;
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    setHighlight(Math.min(highlightIndex + 1, items.length - 1));
+    if (open) setHighlight(Math.min(highlightIndex + 1, items.length - 1));
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    setHighlight(Math.max(highlightIndex - 1, 0));
+    if (open) setHighlight(Math.max(highlightIndex - 1, 0));
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (highlightIndex >= 0 && els.cityDropdown._matches) {
+    if (open && highlightIndex >= 0 && highlightIndex < items.length && els.cityDropdown._matches) {
       /* highlightIndex points at a row of the list _matches was made for, so the element is
          always there (the same cast as SunApp's). */
       selectCity(els.cityDropdown._matches[highlightIndex] as City);
@@ -243,6 +254,9 @@ function closeDropdown(): void {
   els.cityDropdown.setAttribute('hidden', '');
   els.citySearch.setAttribute('aria-expanded', 'false');
   els.cityDropdown.innerHTML = '';
+  // Forget the closed list: no row is highlighted and no match is kept for the keys.
+  highlightIndex = -1;
+  delete els.cityDropdown._matches;
 }
 
 /* ================================================================
@@ -272,7 +286,13 @@ function setFieldError(input: HTMLInputElement, errorEl: HTMLElement, msg: strin
 }
 
 /** Show (text) or clear (null) the "Using ..." line. Cleared text, not just
- *  hidden: aria-describedby still reads a hidden element it points at. */
+ *  hidden: aria-describedby still reads a hidden element it points at.
+ *
+ *  The line names the source of the result now on screen. It changes only when a new result is
+ *  calculated (the GPS tab sets it, a city result clears it) and when the result is taken off the
+ *  screen (hideResults). Switching tabs and editing a coordinate leave the result on screen as it
+ *  was, so they leave the line as it was. Every error or refusal goes through hideResults, so the
+ *  line goes with the result. It never names a source that the result on screen did not use. */
 function setEcho(text: string | null): void {
   els.gpsEcho.textContent = text || '';
   els.gpsEcho.hidden = !text;
@@ -344,16 +364,14 @@ async function onCalculate(): Promise<void> {
       lonVal === null ? 'Enter a longitude between -180 and 180, such as 5.32 or 5,32.' : null);
 
     if (latVal === null || lonVal === null) {
-      // Do not compute, and do not leave an older result showing under the error.
-      setEcho(null);
+      // Do not compute, and do not leave an older result showing under the error (hideResults
+      // also clears the "Using ..." line, which named that result's source).
       hideResults();
       (latVal === null ? els.latInput : els.lonInput).focus();
       return;
     }
 
     lat = latVal; lon = lonVal;
-    // Echo the numbers actually used, so "6,5" visibly became 6.5.
-    setEcho(`Using ${lat}, ${lon}`);
     showLoading(true);
     try { tzInfo = await resolveTimezone(lat, lon); } catch (err) { showLoading(false); showError(err instanceof Error ? err.message : String(err)); return; }
     showLoading(false);
@@ -407,6 +425,10 @@ async function onCalculate(): Promise<void> {
 
   els.resMorningWindow.textContent = morningStr;
   els.resEveningWindow.textContent = eveningStr;
+
+  // Echo the numbers actually used, so "6,5" visibly became 6.5. Set with the result it names; a
+  // city result has no such line.
+  setEcho(city ? null : `Using ${lat}, ${lon}`);
 
   els.resultsCard.removeAttribute('hidden');
   setTimeout(() => els.resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -560,6 +582,7 @@ function showLoading(show: boolean): void { els.loadingOverlay.hidden = !show; }
  *  ticking towards a window that belongs to the previous input. */
 function hideResults(): void {
   els.resultsCard.setAttribute('hidden', '');
+  setEcho(null);
   if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
 }
 

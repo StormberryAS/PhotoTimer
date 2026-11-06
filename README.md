@@ -1,14 +1,14 @@
 # PhotoTimer
 
-Offline golden-hour and blue-hour scheduler for photographers and cinematographers. PhotoTimer calculates exact "Golden Hour" and "Blue Hour" windows anywhere on Earth without external server lookups or tracker cookies.
+Offline golden-hour scheduler for photographers and cinematographers. PhotoTimer calculates the exact morning and evening golden-hour windows anywhere on Earth without external server lookups or tracker cookies.
 
 **Live:** [photo.stormberry.as](https://photo.stormberry.as)
 
 ## Features
 - **Accurate calculations**: morning and evening golden-hour bounds computed within the browser.
 - **City search or typed coordinates**: pick from the bundled city catalogue, or type a latitude and longitude. A decimal comma works as well as a point (`60,39` or `60.39`), and so does a typographic minus; anything out of range is refused with a message rather than computed.
-- **Live countdown**: an animated, real-time pulsing ticker that counts down to the next optimal shooting window.
-- **.ics calendar export**: one-click `.ics` generation, so the next window drops straight into Apple Calendar, ProtonCalendar, Outlook, etc.
+- **Live countdown**: a real-time countdown to the next start or end of a golden hour. In the last hour before that moment, the countdown pulses.
+- **.ics calendar export**: one-click `.ics` export of the morning and evening golden-hour windows of the chosen date, ready for Apple Calendar, ProtonCalendar, Outlook, etc.
 - **Sovereign architecture**: the times are computed in the browser with no network call; typed coordinates take the timezone of the nearest city in the bundled catalogue.
 
 ## Architecture

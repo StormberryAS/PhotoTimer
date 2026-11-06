@@ -54,8 +54,8 @@ function init() {
         if (!(target instanceof Element) || !target.closest('.search-wrapper'))
             closeDropdown();
     });
-    els.latInput.addEventListener('input', () => { setFieldError(els.latInput, els.latError, null); setEcho(null); });
-    els.lonInput.addEventListener('input', () => { setFieldError(els.lonInput, els.lonError, null); setEcho(null); });
+    els.latInput.addEventListener('input', () => setFieldError(els.latInput, els.latError, null));
+    els.lonInput.addEventListener('input', () => setFieldError(els.lonInput, els.lonError, null));
     els.calculateBtn.addEventListener('click', onCalculate);
 }
 function switchTab(tab) {
@@ -95,7 +95,14 @@ function onCityInput() {
         li.setAttribute('role', 'option');
         li.setAttribute('aria-selected', 'false');
         li.dataset['index'] = String(i);
-        li.innerHTML = `<span class="city-name">${city.name}</span><span class="city-country">${city.country}</span>`;
+        const name = document.createElement('span');
+        name.className = 'city-name';
+        name.textContent = city.name;
+        const country = document.createElement('span');
+        country.className = 'city-country';
+        country.textContent = city.country;
+        li.appendChild(name);
+        li.appendChild(country);
         li.addEventListener('click', () => selectCity(city));
         li.addEventListener('mouseenter', () => setHighlight(i));
         els.cityDropdown.appendChild(li);
@@ -106,17 +113,20 @@ function onCityInput() {
 }
 function onCityKeydown(e) {
     const items = els.cityDropdown.querySelectorAll('li');
+    const open = !els.cityDropdown.hidden && items.length > 0;
     if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(Math.min(highlightIndex + 1, items.length - 1));
+        if (open)
+            setHighlight(Math.min(highlightIndex + 1, items.length - 1));
     }
     else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlight(Math.max(highlightIndex - 1, 0));
+        if (open)
+            setHighlight(Math.max(highlightIndex - 1, 0));
     }
     else if (e.key === 'Enter') {
         e.preventDefault();
-        if (highlightIndex >= 0 && els.cityDropdown._matches) {
+        if (open && highlightIndex >= 0 && highlightIndex < items.length && els.cityDropdown._matches) {
             selectCity(els.cityDropdown._matches[highlightIndex]);
         }
     }
@@ -146,6 +156,8 @@ function closeDropdown() {
     els.cityDropdown.setAttribute('hidden', '');
     els.citySearch.setAttribute('aria-expanded', 'false');
     els.cityDropdown.innerHTML = '';
+    highlightIndex = -1;
+    delete els.cityDropdown._matches;
 }
 function parseDecimal(text, min, max) {
     if (text == null)
@@ -215,14 +227,12 @@ async function onCalculate() {
         setFieldError(els.latInput, els.latError, latVal === null ? 'Enter a latitude between -90 and 90, such as 60.39 or 60,39.' : null);
         setFieldError(els.lonInput, els.lonError, lonVal === null ? 'Enter a longitude between -180 and 180, such as 5.32 or 5,32.' : null);
         if (latVal === null || lonVal === null) {
-            setEcho(null);
             hideResults();
             (latVal === null ? els.latInput : els.lonInput).focus();
             return;
         }
         lat = latVal;
         lon = lonVal;
-        setEcho(`Using ${lat}, ${lon}`);
         showLoading(true);
         try {
             tzInfo = await resolveTimezone(lat, lon);
@@ -267,6 +277,7 @@ async function onCalculate() {
     els.resTz.textContent = tzInfo.abbreviation ? `${tzInfo.abbreviation} / ${tz}` : tz;
     els.resMorningWindow.textContent = morningStr;
     els.resEveningWindow.textContent = eveningStr;
+    setEcho(city ? null : `Using ${lat}, ${lon}`);
     els.resultsCard.removeAttribute('hidden');
     setTimeout(() => els.resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
@@ -382,6 +393,7 @@ function clearError() { els.errorMsg.setAttribute('hidden', ''); els.errorMsg.te
 function showLoading(show) { els.loadingOverlay.hidden = !show; }
 function hideResults() {
     els.resultsCard.setAttribute('hidden', '');
+    setEcho(null);
     if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;

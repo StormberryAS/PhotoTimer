@@ -132,7 +132,7 @@ test('typed coordinates: a decimal comma, a Unicode minus, refusals and the zone
     ['Using 60.39, 5.32', '60.3900°, 5.3200° | GMT+1 / Europe/Oslo | 08:13 – 09:25 | 15:22 – 16:33 | 03:22:05']);
   assert.match(page.exportIcs().text, /\nLOCATION:Lat: 60\.3900, Lon: 5\.3200\n/);
   page.typeCoord('lat', '\u221233,87');
-  assert.equal(page.state().echo, null);
+  assert.equal(page.state().echo, 'Using 60.39, 5.32', 'an edit does not calculate: the result on screen is still the one for 60.39, 5.32');
   page.typeCoord('lon', '151.21');
   await page.calculate();
   assert.deepEqual([page.state().echo, page.state().result?.tz], ['Using -33.87, 151.21', 'GMT+11 / Australia/Sydney']);
@@ -151,4 +151,139 @@ test('typed coordinates: a decimal comma, a Unicode minus, refusals and the zone
   assert.deepEqual([[0, 0], [0, 179.99], [0, -179.99], [-90, 0], [71, -8], [21.3, -157.8]].map(([a, b]) => page.call('nearestCityTimezone', [a ?? 0, b ?? 0])),
     ['"Africa/Accra"', '"Pacific/Tarawa"', '"Pacific/Tarawa"', '"Atlantic/South_Georgia"', '"Atlantic/Reykjavik"', '"Pacific/Honolulu"']);
   assert.deepEqual(['2026-01-01', '2026-03-29', ''].map((d) => page.call('getTimezoneAbbreviation', ['Europe/Oslo', d])), ['"GMT+1"', '"GMT+2"', '""']);
+});
+
+// The fixes of 6 November 2026. Before them (app.js of 3ccd25c), the "Using ..." line kept its
+// text after a switch to the City tab and came back beside a city's result, and ArrowUp then Enter
+// picked a city from a list that was already closed. The rule for the line: it names the source of
+// the result on screen, changes only when a new result is calculated (or the result is taken off the
+// screen), and never names a source that the result on screen did not use.
+
+test('the "Using ..." line names the source of the result on screen, and changes only with that result', async () => {
+  const page = loadPage(root, NOW);
+  /** The line is empty, or names the coordinates of the result on screen (and the result exists). */
+  const never = (): void => {
+    const { echo, result } = page.state();
+    if (echo === null) return;
+    const m = /^Using (-?[\d.]+), (-?[\d.]+)$/.exec(echo);
+    assert.ok(m && result, `the line "${echo}" has no result to name`);
+    assert.equal(result.coords, `${Number(m[1]).toFixed(4)}\u00b0, ${Number(m[2]).toFixed(4)}\u00b0`, 'the line names another source than the result');
+  };
+  const view = (): [string | null, string | undefined] => [page.state().echo, page.state().result?.coords];
+  never();
+  page.clickTab('gps');
+  page.typeCoord('lat', '60,39');
+  page.typeCoord('lon', '5,32');
+  never();
+  assert.deepEqual(view(), [null, undefined], 'typed, not calculated: no result, no line');
+  await page.calculate();
+  never();
+  assert.deepEqual(view(), ['Using 60.39, 5.32', '60.3900\u00b0, 5.3200\u00b0']);
+  page.clickTab('gps');
+  assert.equal(page.state().echo, 'Using 60.39, 5.32', 'a press on the tab that is open changes nothing');
+  // GPS, City, GPS with no Calculate: the result on screen is still the GPS one, so the line stays.
+  page.clickTab('city');
+  never();
+  assert.deepEqual([page.state().panels, ...view()], ['shown/hidden', 'Using 60.39, 5.32', '60.3900\u00b0, 5.3200\u00b0'], 'the City tab changes nothing');
+  page.clickTab('gps');
+  never();
+  assert.deepEqual([page.state().panels, ...view()], ['hidden/shown', 'Using 60.39, 5.32', '60.3900\u00b0, 5.3200\u00b0'], 'the round trip without a Calculate: the same result, the same line');
+  // A city selected but not calculated, and an edited coordinate, do not change the result on screen.
+  page.clickTab('city');
+  page.typeCity('Bergen');
+  page.clickRow(0);
+  never();
+  assert.deepEqual(view(), ['Using 60.39, 5.32', '60.3900\u00b0, 5.3200\u00b0'], 'a chosen city is not a result yet');
+  page.clickTab('gps');
+  page.typeCoord('lat', '61');
+  never();
+  assert.deepEqual(view(), ['Using 60.39, 5.32', '60.3900\u00b0, 5.3200\u00b0'], 'an edit is not a result yet: the line still names the numbers of the result on screen');
+  // A new city result replaces the GPS result: the line goes with it, on every tab.
+  page.clickTab('city');
+  await page.calculate();
+  never();
+  assert.deepEqual(view(), [null, '60.3930\u00b0, 5.3242\u00b0'], 'the result for Bergen has no GPS source');
+  page.clickTab('gps');
+  never();
+  assert.deepEqual([page.state().panels, ...view()], ['hidden/shown', null, '60.3930\u00b0, 5.3242\u00b0'], 'GPS, City, GPS: no line beside the result for Bergen');
+  // A new GPS result names itself.
+  await page.calculate();
+  never();
+  assert.deepEqual(view(), ['Using 61, 5.32', '61.0000\u00b0, 5.3200\u00b0']);
+  // A result taken off the screen takes its line with it: an error, a refused number, no city.
+  page.setDate('');
+  await page.calculate();
+  never();
+  assert.deepEqual([page.state().error, ...view()], ['Please select a valid date.', null, undefined]);
+  page.setDate('2026-11-05');
+  await page.calculate();
+  assert.equal(page.state().echo, 'Using 61, 5.32');
+  page.typeCoord('lon', '181');
+  await page.calculate();
+  never();
+  assert.deepEqual(view(), [null, undefined], 'a refused number hides the result and the line');
+  page.typeCoord('lon', '5,32');
+  await page.calculate();
+  assert.equal(page.state().echo, 'Using 61, 5.32');
+  page.clickTab('city');
+  page.clearCity();
+  await page.calculate();
+  never();
+  assert.deepEqual([page.state().error, ...view()], ['Please select a city first.', null, undefined], 'no city: the error hides the result and the line');
+});
+
+test('the city rows are built with DOM calls: text, never markup', () => {
+  const page = loadPage(root, NOW);
+  page.typeCity('Berg');
+  const rows = page.rows();
+  assert.equal(rows.length, 8);
+  assert.deepEqual(rows[0], { tag: 'li', role: 'option', selected: 'false', index: '0', innerHTML: '',
+    children: [{ tag: 'span', className: 'city-name', text: 'Bergerac', children: 0 }, { tag: 'span', className: 'city-country', text: 'France', children: 0 }] },
+  'one li with two spans and no markup string set on it');
+  assert.deepEqual(rows.map((r) => r.index), ['0', '1', '2', '3', '4', '5', '6', '7']);
+  assert.ok(rows.every((r) => r.innerHTML === '' && r.children.length === 2 && r.children.every((c) => c.children === 0)));
+  assert.equal(page.state().dropdown[0], row('Bergerac', 'France'), 'the serialised row is the markup the page had before');
+  // The two catalogue names that hold "&" keep it as plain text.
+  page.typeCity('Choi Wan Estate');
+  assert.deepEqual(page.rows().map((r) => r.children.map((c) => c.text)), [['Choi Wan Estate (I & II)', 'Hong Kong']]);
+  page.hoverRow(0);
+  assert.equal(page.state().highlighted, 0);
+  page.clickRow(0);
+  assert.deepEqual([page.state().selected, page.state().dropdown], ['Choi Wan Estate (I & II), Hong Kong (Asia/Hong_Kong)', []]);
+});
+
+test('the keys pick a city only from a list that is open', () => {
+  const page = loadPage(root, NOW);
+  page.typeCity('Bergen');
+  page.clickRow(0);
+  assert.equal(page.state().selected, 'Bergen, Norway (Europe/Oslo)');
+  page.typeCity('Berg');
+  page.key('ArrowDown');
+  page.key('ArrowDown');
+  assert.equal(page.state().highlighted, 1);
+  page.key('Escape');
+  assert.deepEqual([page.state().dropdown, page.state().highlighted], [[], -1]);
+  assert.equal(page.key('ArrowUp'), true, 'the page still takes the arrow key, as before');
+  assert.equal(page.key('Enter'), true);
+  page.key('ArrowDown');
+  page.key('Enter');
+  assert.deepEqual([page.state().selected, page.state().city, page.state().dropdown], ['Bergen, Norway (Europe/Oslo)', 'Berg', []],
+    'Escape closed the list: no key picks a row of it');
+  page.typeCity('Berg');
+  page.key('ArrowDown');
+  page.clickOutside();
+  page.key('ArrowUp');
+  page.key('Enter');
+  assert.equal(page.state().selected, 'Bergen, Norway (Europe/Oslo)', 'a click outside closed the list: the same');
+  page.typeCity('zzzzqqq');
+  page.key('ArrowDown');
+  page.key('Enter');
+  assert.deepEqual([page.state().selected, page.state().dropdown], ['Bergen, Norway (Europe/Oslo)', []], 'no match, no list: the same');
+  page.typeCity('Berg');
+  page.key('ArrowDown');
+  page.key('ArrowDown');
+  page.key('ArrowUp');
+  page.key('Enter');
+  assert.deepEqual([page.state().selected, page.state().city, page.state().dropdown], ['Bergerac, France (Europe/Paris)', '', []],
+    'the open list: the keys work as before');
 });

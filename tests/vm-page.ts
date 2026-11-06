@@ -36,12 +36,18 @@ class StubElement {
   get hidden(): boolean { return this.attributes.has('hidden'); }
   set hidden(on: boolean) { if (on) this.attributes.set('hidden', ''); else this.attributes.delete('hidden'); }
   get className(): string { return [...this.classes].join(' '); }
+  set className(value: string) { this.classes.clear(); for (const c of value.split(/\s+/)) if (c) this.classes.add(c); }
   readonly classList = {
     add: (c: string): void => { this.classes.add(c); },
     remove: (c: string): void => { this.classes.delete(c); },
     contains: (c: string): boolean => this.classes.has(c),
     toggle: (c: string, on?: boolean): boolean => { const v = on ?? !this.classes.has(c); if (v) this.classes.add(c); else this.classes.delete(c); return v; },
   };
+  /** The element as innerHTML would write it, from its children and their text (a row of the city list). */
+  markup(): string {
+    const esc = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return this.children.map((c) => `<${c.tag}${c.classes.size ? ` class="${c.className}"` : ''}>${esc(c.textContent)}</${c.tag}>`).join('');
+  }
   /** Markup is only recorded; setting it to '' empties the element, as app.js expects. */
   get innerHTML(): string { return this.#html; }
   set innerHTML(html: string) { this.#html = html; if (html === '') this.children.splice(0); }
@@ -84,6 +90,7 @@ export interface PageState {
   tab: string;
   panels: string;
   city: string;
+  /** The rows of the open list, each as the markup of its children. */
   dropdown: string[];
   highlighted: number;
   selected: string | null;
@@ -110,6 +117,8 @@ export interface Page {
   /** A click on the page outside the search. */
   clickOutside(): void;
   clickTab(tab: 'city' | 'gps'): void;
+  /** The rows of the list as built: the tag, the attributes, the markup that was set (none expected) and the children. */
+  rows(): { tag: string; role: string | null; selected: string | null; index: string | undefined; innerHTML: string; children: { tag: string; className: string; text: string; children: number }[] }[];
   clearCity(): void;
   setDate(value: string): void;
   /** Types into a coordinate field (the input event). */
@@ -211,7 +220,7 @@ export function loadPage(root: URL, start: number): Page {
       tab: ['tab-city', 'tab-gps'].map((id) => `${id}:${el(id).className}:${el(id).getAttribute('aria-selected')}`).join(' '),
       panels: `${el('panel-city').hidden ? 'hidden' : 'shown'}/${el('panel-gps').hidden ? 'hidden' : 'shown'}`,
       city: el('city-search').value,
-      dropdown: el('city-dropdown').hidden ? [] : el('city-dropdown').children.map((li) => li.innerHTML),
+      dropdown: el('city-dropdown').hidden ? [] : el('city-dropdown').children.map((li) => li.markup()),
       highlighted: el('city-dropdown').children.findIndex((li) => li.classes.has('highlighted')),
       selected: shown('city-selected') === null ? null : el('city-selected-text').textContent,
       error: shown('error-msg'),
@@ -232,6 +241,10 @@ export function loadPage(root: URL, start: number): Page {
     hoverRow: (i) => { const li = el('city-dropdown').children[i]; if (!li) throw new Error(`no row ${i}`); li.fire('mouseenter'); },
     clickRow: (i) => { const li = el('city-dropdown').children[i]; if (!li) throw new Error(`no row ${i}`); li.fire('click'); },
     clickOutside: () => { const fn = docListeners.get('click'); if (fn) fn({ target: new StubElement('h1'), preventDefault: () => undefined }); },
+    rows: () => el('city-dropdown').children.map((li) => ({
+      tag: li.tag, role: li.getAttribute('role'), selected: li.getAttribute('aria-selected'), index: li.dataset['index'], innerHTML: li.innerHTML,
+      children: li.children.map((c) => ({ tag: c.tag, className: c.className, text: c.textContent, children: c.children.length })),
+    })),
     clickTab: (tab) => { el(`tab-${tab}`).fire('click'); },
     clearCity: () => { el('city-clear-btn').fire('click'); },
     setDate: (value) => { el('date-input').value = value; },
